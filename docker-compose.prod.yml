@@ -1,0 +1,37 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: healthcare_crm
+      MYSQL_USER: crm
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+  laravel:
+    build:
+      context: ./backend
+    working_dir: /app
+    command: sh start.sh
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - mysql
+    restart: unless-stopped
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run build && npm run preview"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
