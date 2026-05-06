@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\MedicalHistory;
 use App\Models\Patient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class PatientController extends Controller
@@ -53,6 +55,25 @@ class PatientController extends Controller
     public function history(Patient $patient): JsonResponse
     {
         return response()->json($patient->medicalHistories()->latest('recorded_at')->get());
+    }
+
+    public function addHistory(Request $request, Patient $patient): JsonResponse
+    {
+        $data = $request->validate([
+            'condition' => ['required', 'string', 'max:255'],
+            'medications' => ['nullable', 'string', 'max:1000'],
+            'allergies' => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'recorded_at' => ['nullable', 'date'],
+        ]);
+
+        $history = MedicalHistory::create([
+            ...$data,
+            'patient_id' => $patient->id,
+            'recorded_at' => $data['recorded_at'] ?? Carbon::now(),
+        ]);
+
+        return response()->json($history, 201);
     }
 
     private function validated(Request $request, bool $partial = false): array

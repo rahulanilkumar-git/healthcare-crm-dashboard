@@ -51,6 +51,9 @@ button {
 .panel-head,
 .panel-head button,
 .primary,
+.secondary,
+.row-actions,
+.inline-action,
 .appointment {
   display: flex;
   align-items: center;
@@ -290,6 +293,25 @@ td {
   color: #166534;
 }
 
+.status.completed,
+.status.paid {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.status.cancelled,
+.status.inactive,
+.status.overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status.sent,
+.status.draft {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .form-panel {
   position: sticky;
   top: 24px;
@@ -327,6 +349,13 @@ td {
   color: #111827;
 }
 
+.field input:disabled,
+.field select:disabled {
+  background: #f2f4f7;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
 .primary {
   justify-content: center;
   gap: 7px;
@@ -342,6 +371,44 @@ td {
 
 .primary:disabled {
   opacity: 0.65;
+}
+
+.secondary {
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  margin-top: 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  font-weight: 900;
+}
+
+.row-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.row-actions button,
+.inline-action {
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.row-actions button:hover,
+.inline-action:hover,
+.secondary:hover {
+  border-color: #98a2b3;
+  background: #f8fafc;
 }
 
 .appointment-list {
@@ -363,9 +430,45 @@ td {
   font-weight: 900;
 }
 
-.appointment div {
+.appointment > div:not(.row-actions) {
   min-width: 0;
   flex: 1;
+}
+
+.detail-stack {
+  display: grid;
+  gap: 10px;
+  color: #344054;
+}
+
+.detail-stack h3 {
+  margin: 8px 0 0;
+  color: #111827;
+  font-size: 15px;
+}
+
+.detail-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #edf1f6;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.detail-card p {
+  color: #475467;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.muted {
+  color: #667085;
+  line-height: 1.55;
+}
+
+.billing-table {
+  margin-top: 14px;
 }
 
 .simple-panel {
@@ -452,5 +555,13 @@ td {
   .appointment {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .row-actions {
+    width: 100%;
+  }
+
+  .row-actions button {
+    flex: 1;
   }
 }

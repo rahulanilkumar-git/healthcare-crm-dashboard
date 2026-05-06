@@ -49,6 +49,25 @@ class PaymentController extends Controller
         ]);
     }
 
+    public function createInvoice(Request $request, Patient $patient): JsonResponse
+    {
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:1'],
+            'due_date' => ['required', 'date'],
+            'description' => ['required', 'string', 'max:255'],
+            'status' => ['sometimes', 'in:draft,sent,paid,overdue'],
+        ]);
+
+        $invoice = Invoice::create([
+            ...$data,
+            'patient_id' => $patient->id,
+            'invoice_number' => 'INV-'.Carbon::now()->format('Ymd').'-'.Str::upper(Str::random(6)),
+            'status' => $data['status'] ?? 'sent',
+        ]);
+
+        return response()->json($invoice, 201);
+    }
+
     public function patientInvoices(Patient $patient): JsonResponse
     {
         return response()->json($patient->invoices()->with('payments')->latest()->get());

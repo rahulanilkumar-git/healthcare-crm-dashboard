@@ -39,8 +39,51 @@ export async function createPatient(payload) {
   return data;
 }
 
+export async function updatePatient(id, payload) {
+  const { data } = await api.put(`/patients/${id}`, payload);
+  return data;
+}
+
+export async function deletePatient(id) {
+  await api.delete(`/patients/${id}`);
+}
+
+export async function getPatientHistory(id) {
+  const { data } = await api.get(`/patients/${id}/history`);
+  return data;
+}
+
+export async function addPatientHistory(id, payload) {
+  const { data } = await api.post(`/patients/${id}/history`, payload);
+  return data;
+}
+
+export async function getPatientInvoices(id) {
+  const { data } = await api.get(`/patients/${id}/invoices`);
+  return data;
+}
+
+export async function createInvoice(patientId, payload) {
+  const { data } = await api.post(`/patients/${patientId}/invoices`, payload);
+  return data;
+}
+
 export async function createAppointment(payload) {
   const { data } = await api.post('/appointments', payload);
+  return data;
+}
+
+export async function updateAppointment(id, payload) {
+  const { data } = await api.put(`/appointments/${id}`, payload);
+  return data;
+}
+
+export async function deleteAppointment(id) {
+  await api.delete(`/appointments/${id}`);
+}
+
+export async function createPayment(payload) {
+  const { data } = await api.post('/payments', payload);
   return data;
 }
 
