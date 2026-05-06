@@ -38,6 +38,8 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('payments/{payment}/receipt', [PaymentController::class, 'receipt']);
         Route::get('payments/{payment}', [PaymentController::class, 'show']);
         Route::post('payments', [PaymentController::class, 'store']);
+        Route::post('payments/stripe-checkout', [PaymentController::class, 'stripeCheckout']);
+        Route::post('payments/stripe-confirm', [PaymentController::class, 'stripeConfirm']);
         Route::post('patients/{patient}/invoices', [PaymentController::class, 'createInvoice']);
         Route::put('invoices/{invoice}', [PaymentController::class, 'updateInvoice']);
         Route::delete('invoices/{invoice}', [PaymentController::class, 'deleteInvoice']);

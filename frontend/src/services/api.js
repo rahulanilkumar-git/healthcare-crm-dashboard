@@ -128,6 +128,16 @@ export async function createPayment(payload) {
   return data;
 }
 
+export async function createStripeCheckout(invoiceId) {
+  const { data } = await api.post('/payments/stripe-checkout', { invoice_id: invoiceId });
+  return data;
+}
+
+export async function confirmStripeCheckout(sessionId) {
+  const { data } = await api.post('/payments/stripe-confirm', { session_id: sessionId });
+  return data;
+}
+
 export async function getPaymentReceipt(id) {
   const { data } = await api.post(`/payments/${id}/receipt`);
   return data;

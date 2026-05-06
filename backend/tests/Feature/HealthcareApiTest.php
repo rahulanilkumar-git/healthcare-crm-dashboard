@@ -50,6 +50,16 @@ class HealthcareApiTest extends TestCase
             ->assertJsonPath('status', 'sent')
             ->json('id');
 
+        $this->withHeaders($headers)
+            ->postJson('/api/payments/stripe-checkout', ['invoice_id' => $invoiceId])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Stripe test payments are not configured. Add STRIPE_SECRET to backend/.env.');
+
+        $this->withHeaders($headers)
+            ->postJson('/api/payments/stripe-confirm', ['session_id' => 'cs_test_missing_config'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Stripe test payments are not configured. Add STRIPE_SECRET to backend/.env.');
+
         $paymentId = $this->withHeaders($headers)
             ->postJson('/api/payments', [
                 'invoice_id' => $invoiceId,

@@ -8,7 +8,7 @@ A full-stack healthcare CRM for clinic operations. It includes JWT authenticatio
 - Patient create, edit, delete, search, and detail view
 - Medical history notes per patient
 - Appointment create, edit, complete, cancel, and delete
-- Invoice create, edit, delete, payment recording, and receipt view
+- Invoice create, edit, delete, local payment recording, Stripe test Checkout, and receipt view
 - Analytics summaries for patients, appointments, and monthly revenue
 - Login/logout with JWT
 - Admin user management for admin, doctor, and patient accounts
@@ -156,9 +156,47 @@ POST   /api/patients/{id}/invoices
 PUT    /api/invoices/{id}
 DELETE /api/invoices/{id}
 POST   /api/payments
+POST   /api/payments/stripe-checkout
+POST   /api/payments/stripe-confirm
 GET    /api/payments/{id}
 POST   /api/payments/{id}/receipt
 ```
+
+## Stripe Test Payments
+
+Stripe is optional. The local demo payment flow still works without Stripe keys.
+
+To use free Stripe test Checkout, add test keys to `backend/.env`:
+
+```env
+STRIPE_KEY=pk_test_your_key
+STRIPE_SECRET=sk_test_your_key
+FRONTEND_URL=http://localhost:3000
+```
+
+Restart Laravel after changing `.env`:
+
+```bash
+docker compose restart laravel
+```
+
+In the app:
+
+1. Log in as admin.
+2. Go to Billing.
+3. Select a patient.
+4. Create or choose an unpaid invoice.
+5. Click `Stripe test`.
+6. Use Stripe's test card:
+
+```text
+4242 4242 4242 4242
+Any future expiry
+Any CVC
+Any ZIP
+```
+
+After Stripe redirects back to the app, the invoice is confirmed and marked paid.
 
 ### Analytics
 
@@ -183,7 +221,8 @@ GET /api/analytics/appointments
 
 ## Notes
 
-- Payments are recorded as a local demo workflow. Real Stripe checkout/payment intent integration is the main remaining production payment task.
+- Stripe runs in test mode when test keys are configured. Do not commit Stripe secret keys.
+- Payments can also be recorded through the local demo workflow.
 - Do not commit generated logs from `backend/storage/logs`.
 - The frontend intentionally uses simple tables and summary cards instead of chart-heavy analytics.
 

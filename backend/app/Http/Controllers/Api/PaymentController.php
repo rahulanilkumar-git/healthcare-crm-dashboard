@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Stripe\Exception\ApiErrorException;
+use Stripe\StripeClient;
 
 class PaymentController extends Controller
 {
@@ -48,6 +50,116 @@ class PaymentController extends Controller
             'payment' => $payment->load(['patient', 'invoice']),
             'issued_at' => Carbon::now()->toIso8601String(),
         ]);
+    }
+
+    public function stripeCheckout(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'invoice_id' => ['required', 'exists:invoices,id'],
+        ]);
+
+        $secret = env('STRIPE_SECRET');
+
+        if (! $secret) {
+            return response()->json([
+                'message' => 'Stripe test payments are not configured. Add STRIPE_SECRET to backend/.env.',
+            ], 422);
+        }
+
+        $invoice = Invoice::with('patient')->findOrFail($data['invoice_id']);
+
+        if ($invoice->status === 'paid') {
+            return response()->json(['message' => 'This invoice is already paid.'], 422);
+        }
+
+        try {
+            $stripe = new StripeClient($secret);
+            $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
+
+            $session = $stripe->checkout->sessions->create([
+                'mode' => 'payment',
+                'payment_method_types' => ['card'],
+                'customer_email' => $invoice->patient->email,
+                'success_url' => $frontendUrl.'?stripe_status=success&session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => $frontendUrl.'?stripe_status=cancelled',
+                'metadata' => [
+                    'invoice_id' => (string) $invoice->id,
+                    'patient_id' => (string) $invoice->patient_id,
+                ],
+                'line_items' => [[
+                    'quantity' => 1,
+                    'price_data' => [
+                        'currency' => 'usd',
+                        'unit_amount' => (int) round((float) $invoice->amount * 100),
+                        'product_data' => [
+                            'name' => $invoice->invoice_number,
+                            'description' => $invoice->description,
+                        ],
+                    ],
+                ]],
+            ]);
+
+            return response()->json([
+                'checkout_url' => $session->url,
+                'session_id' => $session->id,
+            ]);
+        } catch (ApiErrorException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function stripeConfirm(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'session_id' => ['required', 'string'],
+        ]);
+
+        $secret = env('STRIPE_SECRET');
+
+        if (! $secret) {
+            return response()->json([
+                'message' => 'Stripe test payments are not configured. Add STRIPE_SECRET to backend/.env.',
+            ], 422);
+        }
+
+        try {
+            $stripe = new StripeClient($secret);
+            $session = $stripe->checkout->sessions->retrieve($data['session_id']);
+        } catch (ApiErrorException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        if ($session->payment_status !== 'paid') {
+            return response()->json([
+                'message' => 'Stripe checkout has not been paid yet.',
+                'payment_status' => $session->payment_status,
+            ], 422);
+        }
+
+        $invoiceId = $session->metadata->invoice_id ?? null;
+        $patientId = $session->metadata->patient_id ?? null;
+
+        if (! $invoiceId || ! $patientId) {
+            return response()->json(['message' => 'Stripe session is missing invoice metadata.'], 422);
+        }
+
+        $invoice = Invoice::findOrFail($invoiceId);
+
+        $payment = Payment::firstOrCreate(
+            ['stripe_payment_intent_id' => $session->payment_intent ?: $session->id],
+            [
+                'invoice_id' => $invoice->id,
+                'patient_id' => $patientId,
+                'amount' => $invoice->amount,
+                'currency' => strtoupper($session->currency ?: 'USD'),
+                'status' => 'paid',
+                'paid_at' => Carbon::now(),
+            ]
+        );
+
+        $invoice->update(['status' => 'paid']);
+
+        return response()->json($payment->load(['patient', 'invoice']), 201);
     }
 
     public function createInvoice(Request $request, Patient $patient): JsonResponse

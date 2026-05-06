@@ -26,6 +26,7 @@ import {
   createInvoice,
   createPatient,
   createPayment,
+  createStripeCheckout,
   createUser,
   deleteAppointment,
   deleteInvoice,
@@ -45,6 +46,7 @@ import {
   getRevenue,
   login,
   logout,
+  confirmStripeCheckout,
   updateAppointment,
   updateInvoice,
   updatePatient,
@@ -197,6 +199,7 @@ function App() {
         if (user.role === 'patient') setActive('access');
         await loadData();
         if (user.role === 'admin') await loadUsers();
+        await handleStripeReturn(user);
       } catch (error) {
         localStorage.removeItem('crm_token');
         setApiState('Signed out');
@@ -207,6 +210,39 @@ function App() {
 
     boot();
   }, []);
+
+  async function handleStripeReturn(user = currentUser) {
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get('stripe_status');
+    const sessionId = params.get('session_id');
+
+    if (!stripeStatus) return;
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    if (stripeStatus === 'cancelled') {
+      setToast('Stripe checkout was cancelled.');
+      return;
+    }
+
+    if (stripeStatus === 'success' && sessionId && user?.role === 'admin') {
+      try {
+        const payment = await confirmStripeCheckout(sessionId);
+        setSelectedReceipt({
+          receipt_number: `RCT-${payment.id}`,
+          payment,
+          issued_at: payment.paid_at || new Date().toISOString(),
+        });
+        if (payment.patient_id) {
+          setSelectedInvoices(await getPatientInvoices(payment.patient_id));
+        }
+        setActive('billing');
+        setToast('Stripe test payment confirmed.');
+      } catch (error) {
+        setToast(error.response?.data?.message || 'Could not confirm Stripe payment.');
+      }
+    }
+  }
 
   useEffect(() => {
     if (!toast) return;
@@ -517,6 +553,15 @@ function App() {
       setToast('Invoice paid.');
     } catch (error) {
       setToast(error.response?.data?.message || 'Could not record payment.');
+    }
+  }
+
+  async function startStripeCheckout(invoice) {
+    try {
+      const checkout = await createStripeCheckout(invoice.id);
+      window.location.href = checkout.checkout_url;
+    } catch (error) {
+      setToast(error.response?.data?.message || 'Could not start Stripe checkout.');
     }
   }
 
@@ -927,7 +972,10 @@ function App() {
                           {invoice.status === 'paid' ? (
                             <button className="inline-action" type="button" onClick={() => viewReceipt(invoice)}><ReceiptText size={14} /> Receipt</button>
                           ) : (
-                            <button className="inline-action" type="button" onClick={() => payInvoice(invoice)}>Pay</button>
+                            <>
+                              <button className="inline-action" type="button" onClick={() => startStripeCheckout(invoice)}>Stripe test</button>
+                              <button className="inline-action" type="button" onClick={() => payInvoice(invoice)}>Local pay</button>
+                            </>
                           )}
                             <button type="button" onClick={() => editInvoice(invoice)}><Edit3 size={15} /> Edit</button>
                             <button type="button" onClick={() => removeInvoice(invoice.id)}><Trash2 size={15} /> Delete</button>
