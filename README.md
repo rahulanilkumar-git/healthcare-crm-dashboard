@@ -1,68 +1,74 @@
-# 🏥 Healthcare CRM Dashboard
+# Healthcare CRM Dashboard
 
-A production-grade healthcare management system with patient tracking, appointment scheduling, payment processing, and analytics dashboard.
+A full-stack healthcare CRM for clinic operations. It includes JWT authentication, role-based API access, patient management, appointment scheduling, medical history notes, invoicing, demo payment recording, receipts, and analytics summaries.
 
-## 📋 Features
+## Features
 
-### Core Features
-- **Patient Management**: Create, update, and manage patient records with medical history
-- **Appointment Scheduling**: Book, reschedule, and manage patient appointments
-- **Payment Processing**: Integrate Stripe for secure online payments and invoicing
-- **Analytics Dashboard**: Real-time dashboards showing patient metrics, revenue, and appointment trends
-- **User Authentication**: Secure JWT-based authentication
-- **Role-Based Access**: Admin, Doctor, and Patient roles with permission management
+### Application
+- Patient create, edit, delete, search, and detail view
+- Medical history notes per patient
+- Appointment create, edit, complete, cancel, and delete
+- Invoice create, edit, delete, payment recording, and receipt view
+- Analytics summaries for patients, appointments, and monthly revenue
+- Login/logout with JWT
+- Admin user management for admin, doctor, and patient accounts
+- Role-based API restrictions
 
-### Technical Features
-- RESTful API architecture
-- Docker containerization
-- CI/CD pipeline with GitHub Actions
-- Comprehensive error handling
-- Database migrations and seeding
-- API rate limiting
-- Pagination support
+### Roles
+- `admin`: full access, including billing and user management
+- `doctor`: patients, appointments, records, and analytics
+- `patient`: authenticated account role reserved for future patient portal access
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
-- **Framework**: Laravel 11
-- **Language**: PHP 8.1+
-- **Database**: MySQL 8.0+
-- **Authentication**: JWT (tymon/jwt-auth)
-- **Payment**: Stripe API
-- **Task Queue**: Laravel Queue
+- Laravel 11
+- PHP 8.2+
+- MySQL 8
+- JWT auth with `tymon/jwt-auth`
+- PHPUnit feature tests
 
 ### Frontend
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **State Management**: Redux Toolkit
-- **API Client**: Axios
-- **UI Components**: Material-UI / Tailwind CSS
-- **Charts**: Chart.js
+- React 18
+- Vite
+- Axios
+- Lucide React icons
+- Vitest API client tests
 
 ### DevOps
-- **Containerization**: Docker & Docker Compose
-- **CI/CD**: GitHub Actions
-- **Version Control**: Git
+- Docker Compose
+- GitHub Actions CI
 
-## 📦 Installation
-
-### Quick Start with Docker
+## Quick Start
 
 ```bash
-git clone https://github.com/rahulanilkumar-git/healthcare-crm-dashboard.git
-cd healthcare-crm-dashboard
-
-docker-compose up -d
-
-docker-compose exec laravel php artisan migrate --seed
-
-# Frontend: http://localhost:3000
-# API: http://localhost:8000/api
+docker compose up -d --build
 ```
 
-### Manual Setup
+The Laravel container installs dependencies, prepares `.env`, runs migrations, seeds data, and starts the API.
 
-#### Backend
+Open:
+- Frontend: http://localhost:3000
+- API health: http://localhost:8000/api
+
+Seed login:
+
+```text
+admin@healthcrm.test
+password123
+```
+
+Other seeded account:
+
+```text
+doctor@healthcrm.test
+password123
+```
+
+## Manual Setup
+
+### Backend
+
 ```bash
 cd backend
 composer install
@@ -70,10 +76,11 @@ cp .env.example .env
 php artisan key:generate
 php artisan jwt:secret
 php artisan migrate --seed
-php artisan serve
+php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-#### Frontend
+### Frontend
+
 ```bash
 cd frontend
 npm install
@@ -81,29 +88,58 @@ cp .env.example .env
 npm run dev
 ```
 
-## 🚀 API Endpoints
+## Testing
+
+Backend:
+
+```bash
+docker compose exec laravel php artisan test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm test
+npm run build
+```
+
+## API Endpoints
 
 ### Authentication
-```
-POST   /api/auth/register
-POST   /api/auth/login
-POST   /api/auth/logout
-POST   /api/auth/refresh
-GET    /api/auth/me
+
+```text
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/refresh
+GET  /api/auth/me
+POST /api/auth/register        admin only
 ```
 
-### Patients
+### Users
+
+```text
+GET    /api/users              admin only
+POST   /api/users              admin only
+PUT    /api/users/{id}         admin only
+DELETE /api/users/{id}         admin only
 ```
+
+### Patients and Records
+
+```text
 GET    /api/patients
 POST   /api/patients
 GET    /api/patients/{id}
 PUT    /api/patients/{id}
 DELETE /api/patients/{id}
 GET    /api/patients/{id}/history
+POST   /api/patients/{id}/history
 ```
 
 ### Appointments
-```
+
+```text
 GET    /api/appointments
 POST   /api/appointments
 GET    /api/appointments/{id}
@@ -112,75 +148,51 @@ DELETE /api/appointments/{id}
 GET    /api/appointments/search
 ```
 
-### Payments
-```
+### Billing
+
+```text
+GET    /api/patients/{id}/invoices
+POST   /api/patients/{id}/invoices
+PUT    /api/invoices/{id}
+DELETE /api/invoices/{id}
 POST   /api/payments
 GET    /api/payments/{id}
 POST   /api/payments/{id}/receipt
-GET    /api/patients/{id}/invoices
 ```
 
 ### Analytics
-```
-GET    /api/analytics/dashboard
-GET    /api/analytics/patients
-GET    /api/analytics/revenue
-GET    /api/analytics/appointments
-```
 
-## 📊 Database Schema
-
-- `users` - User accounts
-- `patients` - Patient information
-- `medical_histories` - Medical records
-- `appointments` - Appointment bookings
-- `payments` - Payment transactions
-- `invoices` - Patient invoices
-- `roles` - User roles
-- `permissions` - Role permissions
-
-## 🧪 Testing
-
-```bash
-cd backend
-php artisan test
-
-cd frontend
-npm test
+```text
+GET /api/analytics/dashboard
+GET /api/analytics/patients
+GET /api/analytics/revenue
+GET /api/analytics/appointments
 ```
 
-## 🔐 Security Features
+## Database Tables
 
-✅ JWT token-based authentication  
-✅ CORS protection  
-✅ SQL injection prevention  
-✅ XSS protection  
-✅ CSRF token validation  
-✅ Rate limiting  
-✅ Password hashing (bcrypt)  
-✅ Stripe PCI compliance  
+- `users`
+- `patients`
+- `medical_histories`
+- `appointments`
+- `invoices`
+- `payments`
+- `roles`
+- `permissions`
+- `permission_role`
 
-## 🚀 Deployment
+## Notes
 
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
+- Payments are recorded as a local demo workflow. Real Stripe checkout/payment intent integration is the main remaining production payment task.
+- Do not commit generated logs from `backend/storage/logs`.
+- The frontend intentionally uses simple tables and summary cards instead of chart-heavy analytics.
 
-## 📚 Documentation
+## License
 
-- [API Routes](./API_ROUTES.md)
-- [Contributing Guide](./CONTRIBUTING.md)
+MIT License - see [LICENSE](LICENSE).
 
-## 📄 License
+## Author
 
-MIT License - see [LICENSE](LICENSE)
-
-## 👥 Author
-
-**Rahul Anilkumar**
+Rahul Anilkumar
 - LinkedIn: [linkedin.com/in/anilkumar-rahul](https://www.linkedin.com/in/anilkumar-rahul/)
 - Email: rahulanilpunalur@gmail.com
-
----
-
-**Version**: 1.0.0 | **Status**: Active Development ✅

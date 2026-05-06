@@ -39,7 +39,9 @@ class AnalyticsController extends Controller
 
     public function revenue(): JsonResponse
     {
-        $monthExpression = 'DATE_FORMAT(paid_at, "%Y-%m")';
+        $monthExpression = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', paid_at)"
+            : 'DATE_FORMAT(paid_at, "%Y-%m")';
 
         return response()->json(Payment::query()
             ->selectRaw($monthExpression.' as month, SUM(amount) as total')

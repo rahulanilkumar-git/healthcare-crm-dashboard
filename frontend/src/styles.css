@@ -44,6 +44,9 @@ button {
 .sidebar nav button,
 .connection,
 .topbar,
+.top-actions,
+.user-chip,
+.icon-action,
 .search,
 .metrics,
 .metrics article,
@@ -54,9 +57,60 @@ button {
 .secondary,
 .row-actions,
 .inline-action,
+.profile-block,
 .appointment {
   display: flex;
   align-items: center;
+}
+
+.login-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: #eef4f7;
+}
+
+.login-card {
+  display: grid;
+  gap: 16px;
+  width: min(430px, 100%);
+  padding: 28px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgba(16, 24, 40, 0.12);
+}
+
+.login-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.login-card p {
+  color: #667085;
+  line-height: 1.5;
+}
+
+.login-hint {
+  font-size: 13px;
+  text-align: center;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b !important;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .brand {
@@ -136,6 +190,12 @@ td small,
   margin-bottom: 16px;
 }
 
+.top-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .topbar p {
   margin: 0;
   color: #0f766e;
@@ -184,6 +244,42 @@ small {
   width: 100%;
   border: 0;
   outline: 0;
+}
+
+.user-chip {
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+}
+
+.user-chip strong,
+.user-chip small {
+  display: block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-action {
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #344054;
+  font-weight: 900;
+}
+
+.icon-action:hover {
+  border-color: #98a2b3;
+  background: #f8fafc;
 }
 
 .metrics {
@@ -312,6 +408,21 @@ td {
   color: #92400e;
 }
 
+.status.admin {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.status.doctor {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.status.patient {
+  background: #f1f5f9;
+  color: #334155;
+}
+
 .form-panel {
   position: sticky;
   top: 24px;
@@ -404,6 +515,11 @@ td {
   font-weight: 900;
 }
 
+.row-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .row-actions button:hover,
 .inline-action:hover,
 .secondary:hover {
@@ -462,6 +578,50 @@ td {
   line-height: 1.45;
 }
 
+.profile-block {
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #edf1f6;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.profile-block strong,
+.profile-block span,
+.profile-block small {
+  display: block;
+}
+
+.profile-block strong {
+  color: #111827;
+}
+
+.profile-block span {
+  color: #475467;
+  font-size: 14px;
+}
+
+.access-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.user-table {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.user-table h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+}
+
+.roles-panel {
+  grid-column: 1 / -1;
+}
+
 .muted {
   color: #667085;
   line-height: 1.55;
@@ -469,6 +629,110 @@ td {
 
 .billing-table {
   margin-top: 14px;
+}
+
+.receipt-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  background: #f0f9ff;
+}
+
+.receipt-card span,
+.receipt-card dt {
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.receipt-card strong {
+  display: block;
+  color: #0f172a;
+}
+
+.receipt-card p {
+  color: #344054;
+}
+
+.receipt-card dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.receipt-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-card dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 800;
+  text-align: right;
+}
+
+.analytics-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.analytics-hero {
+  box-shadow: none;
+}
+
+.analytics-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analytics-metrics div {
+  padding: 14px;
+  border: 1px solid #edf1f6;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.analytics-metrics span {
+  display: block;
+  color: #667085;
+  font-size: 13px;
+}
+
+.analytics-metrics strong {
+  display: block;
+  margin-top: 4px;
+  color: #111827;
+  font-size: 24px;
+}
+
+.status-lists {
+  display: grid;
+  gap: 16px;
+}
+
+.status-lists h3 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 15px;
+}
+
+.status-lists p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.status-lists strong {
+  color: #111827;
 }
 
 .simple-panel {
@@ -523,8 +787,17 @@ td {
     width: min(520px, 100%);
   }
 
+  .top-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
   .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-metrics {
+    grid-template-columns: 1fr;
   }
 
   .split {
@@ -563,5 +836,10 @@ td {
 
   .row-actions button {
     flex: 1;
+  }
+
+  .user-chip,
+  .icon-action {
+    width: 100%;
   }
 }

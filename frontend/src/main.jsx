@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
+  BarChart3,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
@@ -8,10 +9,14 @@ import {
   Edit3,
   FileText,
   HeartPulse,
+  LockKeyhole,
+  LogOut,
   Plus,
+  ReceiptText,
   Search,
   ShieldCheck,
   Trash2,
+  UserCircle,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -21,17 +26,29 @@ import {
   createInvoice,
   createPatient,
   createPayment,
+  createUser,
   deleteAppointment,
+  deleteInvoice,
   deletePatient,
+  deleteUser,
   addPatientHistory,
   getAppointments,
+  getCurrentUser,
   getDashboard,
   getPatientHistory,
   getPatientInvoices,
+  getPatientStats,
   getPatients,
+  getPaymentReceipt,
+  getUsers,
+  getAppointmentStats,
+  getRevenue,
   login,
+  logout,
   updateAppointment,
+  updateInvoice,
   updatePatient,
+  updateUser,
 } from './services/api';
 import './styles.css';
 
@@ -41,7 +58,14 @@ const navItems = [
   ['appointments', 'Appointments', CalendarDays],
   ['billing', 'Billing', CreditCard],
   ['records', 'Records', ClipboardList],
+  ['analytics', 'Analytics', BarChart3],
   ['access', 'Access', ShieldCheck],
+];
+
+const roleCapabilities = [
+  ['Admin', 'Full access to patients, appointments, billing, records, and analytics.'],
+  ['Doctor', 'Can manage patient care, appointments, medical history, and analytics.'],
+  ['Patient', 'Designed for future patient self-service views and invoice access.'],
 ];
 
 const emptyPatient = {
@@ -55,6 +79,22 @@ const emptyPatient = {
   insurance_provider: '',
   status: 'active',
 };
+
+const emptyUser = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'doctor',
+};
+
+function toDateTimeInput(value) {
+  if (!value) return new Date(Date.now() + 86400000).toISOString().slice(0, 16);
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return new Date(Date.now() + 86400000).toISOString().slice(0, 16);
+
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 
 function Toast({ message }) {
   return message ? <div className="toast">{message}</div> : null;
@@ -73,14 +113,26 @@ function App() {
   const [active, setActive] = useState('overview');
   const [query, setQuery] = useState('');
   const [apiState, setApiState] = useState('Connecting');
+  const [authReady, setAuthReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginForm, setLoginForm] = useState({ email: 'admin@healthcrm.test', password: 'password123' });
+  const [loginError, setLoginError] = useState('');
   const [dashboard, setDashboard] = useState(dashboardFallback);
   const [patients, setPatients] = useState(patientsFallback);
   const [appointments, setAppointments] = useState(dashboardFallback.upcoming_appointments);
+  const [users, setUsers] = useState([]);
   const [patientForm, setPatientForm] = useState(emptyPatient);
   const [editingPatientId, setEditingPatientId] = useState(null);
+  const [editingAppointmentId, setEditingAppointmentId] = useState(null);
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedHistory, setSelectedHistory] = useState([]);
   const [selectedInvoices, setSelectedInvoices] = useState([]);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [patientStats, setPatientStats] = useState([]);
+  const [appointmentStats, setAppointmentStats] = useState([]);
+  const [revenueRows, setRevenueRows] = useState([]);
   const [historyForm, setHistoryForm] = useState({ condition: '', medications: '', allergies: '', notes: '' });
   const [invoiceForm, setInvoiceForm] = useState({
     amount: '',
@@ -94,20 +146,26 @@ function App() {
     type: 'consultation',
     reason: 'Routine care visit',
   });
+  const [userForm, setUserForm] = useState(emptyUser);
   const [toast, setToast] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function loadData() {
     try {
-      await login();
-      const [dashboardData, patientData, appointmentData] = await Promise.all([
+      const [dashboardData, patientData, appointmentData, patientStatData, appointmentStatData, revenueData] = await Promise.all([
         getDashboard(),
         getPatients(),
         getAppointments(),
+        getPatientStats(),
+        getAppointmentStats(),
+        getRevenue(),
       ]);
       setDashboard(dashboardData);
       setPatients(patientData);
       setAppointments(appointmentData);
+      setPatientStats(patientStatData);
+      setAppointmentStats(appointmentStatData);
+      setRevenueRows(revenueData);
       setAppointmentForm((current) => ({ ...current, patient_id: patientData[0]?.id || '' }));
       setApiState('Live API');
     } catch (error) {
@@ -116,8 +174,38 @@ function App() {
     }
   }
 
+  async function loadUsers() {
+    try {
+      setUsers(await getUsers());
+    } catch (error) {
+      setToast('Could not load users.');
+    }
+  }
+
   useEffect(() => {
-    loadData();
+    async function boot() {
+      const token = localStorage.getItem('crm_token');
+      if (!token) {
+        setApiState('Signed out');
+        setAuthReady(true);
+        return;
+      }
+
+      try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+        if (user.role === 'patient') setActive('access');
+        await loadData();
+        if (user.role === 'admin') await loadUsers();
+      } catch (error) {
+        localStorage.removeItem('crm_token');
+        setApiState('Signed out');
+      } finally {
+        setAuthReady(true);
+      }
+    }
+
+    boot();
   }, []);
 
   useEffect(() => {
@@ -143,6 +231,51 @@ function App() {
   }, [appointments, query]);
 
   const activePatients = patients.filter((patient) => patient.status === 'active').length;
+  const totalRevenue = revenueRows.reduce((sum, row) => sum + Number(row.total || 0), 0);
+
+  async function submitLogin(event) {
+    event.preventDefault();
+    setSaving(true);
+    setLoginError('');
+    try {
+      const user = await login(loginForm.email, loginForm.password);
+      setCurrentUser(user);
+      if (user.role === 'patient') setActive('access');
+      await loadData();
+      if (user.role === 'admin') await loadUsers();
+      setToast(`Welcome, ${user.name}.`);
+    } catch (error) {
+      setLoginError(error.response?.data?.message || 'Could not sign in. Check the API and credentials.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function signOut() {
+    await logout();
+    setCurrentUser(null);
+    setActive('overview');
+    setQuery('');
+    setDashboard(dashboardFallback);
+    setPatients(patientsFallback);
+    setAppointments(dashboardFallback.upcoming_appointments);
+    setUsers([]);
+    setSelectedPatient(null);
+    setSelectedHistory([]);
+    setSelectedInvoices([]);
+    setSelectedReceipt(null);
+    setPatientStats([]);
+    setAppointmentStats([]);
+    setRevenueRows([]);
+    setApiState('Signed out');
+    setToast('Signed out.');
+  }
+
+  const visibleNavItems = navItems.filter(([id]) => {
+    if (currentUser?.role === 'admin') return true;
+    if (currentUser?.role === 'doctor') return !['billing'].includes(id);
+    return ['access'].includes(id);
+  });
 
   async function submitPatient(event) {
     event.preventDefault();
@@ -198,11 +331,12 @@ function App() {
 
   async function openPatient(patient, nextActive = 'records') {
     setSelectedPatient(patient);
+    setSelectedReceipt(null);
     setActive(nextActive);
     try {
       const [history, invoices] = await Promise.all([
         getPatientHistory(patient.id),
-        getPatientInvoices(patient.id),
+        currentUser?.role === 'admin' ? getPatientInvoices(patient.id) : Promise.resolve([]),
       ]);
       setSelectedHistory(history);
       setSelectedInvoices(invoices);
@@ -236,20 +370,49 @@ function App() {
     event.preventDefault();
     setSaving(true);
     try {
-      const created = await createAppointment({
+      const payload = {
         ...appointmentForm,
         doctor_id: 2,
-        status: 'scheduled',
+        status: appointmentForm.status || 'scheduled',
         scheduled_at: appointmentForm.scheduled_at.replace('T', ' '),
+      };
+
+      if (editingAppointmentId) {
+        const updated = await updateAppointment(editingAppointmentId, payload);
+        setAppointments((current) => current.map((appointment) => (appointment.id === editingAppointmentId ? updated : appointment)));
+        setEditingAppointmentId(null);
+        setToast('Appointment updated.');
+      } else {
+        const created = await createAppointment(payload);
+        setAppointments((current) => [created, ...current]);
+        setToast('Appointment booked.');
+      }
+
+      setAppointmentForm({
+        patient_id: patients[0]?.id || '',
+        scheduled_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+        type: 'consultation',
+        reason: 'Routine care visit',
+        status: 'scheduled',
       });
-      setAppointments((current) => [created, ...current]);
-      setToast('Appointment booked.');
       setActive('appointments');
     } catch (error) {
       setToast(error.response?.data?.message || 'Could not book appointment.');
     } finally {
       setSaving(false);
     }
+  }
+
+  function editAppointment(appointment) {
+    setEditingAppointmentId(appointment.id);
+    setAppointmentForm({
+      patient_id: appointment.patient_id || appointment.patient?.id || '',
+      scheduled_at: toDateTimeInput(appointment.scheduled_at),
+      type: appointment.type || 'consultation',
+      reason: appointment.reason || '',
+      status: appointment.status || 'scheduled',
+    });
+    setActive('appointments');
   }
 
   async function changeAppointmentStatus(appointment, status) {
@@ -286,18 +449,28 @@ function App() {
     if (!selectedPatient) return;
     setSaving(true);
     try {
-      const created = await createInvoice(selectedPatient.id, {
+      const payload = {
         ...invoiceForm,
         amount: Number(invoiceForm.amount),
-      });
-      setSelectedInvoices((current) => [created, ...current]);
+      };
+
+      if (editingInvoiceId) {
+        const updated = await updateInvoice(editingInvoiceId, payload);
+        setSelectedInvoices((current) => current.map((invoice) => (invoice.id === editingInvoiceId ? updated : invoice)));
+        setEditingInvoiceId(null);
+        setToast('Invoice updated.');
+      } else {
+        const created = await createInvoice(selectedPatient.id, payload);
+        setSelectedInvoices((current) => [created, ...current]);
+        setToast('Invoice created.');
+      }
+
       setInvoiceForm({
         amount: '',
         due_date: new Date(Date.now() + 1209600000).toISOString().slice(0, 10),
         description: 'Clinical services',
         status: 'sent',
       });
-      setToast('Invoice created.');
     } catch (error) {
       setToast(error.response?.data?.message || 'Could not create invoice.');
     } finally {
@@ -305,14 +478,39 @@ function App() {
     }
   }
 
+  function editInvoice(invoice) {
+    setEditingInvoiceId(invoice.id);
+    setInvoiceForm({
+      amount: invoice.amount || '',
+      due_date: invoice.due_date?.slice(0, 10) || new Date(Date.now() + 1209600000).toISOString().slice(0, 10),
+      description: invoice.description || 'Clinical services',
+      status: invoice.status || 'sent',
+    });
+    setSelectedReceipt(null);
+  }
+
+  async function removeInvoice(id) {
+    if (!window.confirm('Delete this invoice and related payments?')) return;
+    try {
+      await deleteInvoice(id);
+      setSelectedInvoices((current) => current.filter((invoice) => invoice.id !== id));
+      if (editingInvoiceId === id) setEditingInvoiceId(null);
+      setSelectedReceipt(null);
+      setToast('Invoice deleted.');
+    } catch (error) {
+      setToast(error.response?.data?.message || 'Could not delete invoice.');
+    }
+  }
+
   async function payInvoice(invoice) {
     try {
-      await createPayment({
+      const payment = await createPayment({
         invoice_id: invoice.id,
         patient_id: invoice.patient_id,
         amount: invoice.amount,
         currency: 'USD',
       });
+      setSelectedReceipt(await getPaymentReceipt(payment.id));
       if (selectedPatient) {
         setSelectedInvoices(await getPatientInvoices(selectedPatient.id));
       }
@@ -320,6 +518,104 @@ function App() {
     } catch (error) {
       setToast(error.response?.data?.message || 'Could not record payment.');
     }
+  }
+
+  async function viewReceipt(invoice) {
+    const paymentId = invoice.payments?.[0]?.id;
+    if (!paymentId) {
+      setToast('No payment receipt is available for this invoice yet.');
+      return;
+    }
+
+    try {
+      setSelectedReceipt(await getPaymentReceipt(paymentId));
+      setToast('Receipt loaded.');
+    } catch (error) {
+      setToast(error.response?.data?.message || 'Could not load receipt.');
+    }
+  }
+
+  async function submitUser(event) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const payload = { ...userForm };
+      if (editingUserId && !payload.password) delete payload.password;
+
+      if (editingUserId) {
+        const updated = await updateUser(editingUserId, payload);
+        setUsers((current) => current.map((user) => (user.id === editingUserId ? updated : user)));
+        setEditingUserId(null);
+        setToast('User updated.');
+      } else {
+        const created = await createUser(payload);
+        setUsers((current) => [created, ...current]);
+        setToast('User created.');
+      }
+
+      setUserForm(emptyUser);
+    } catch (error) {
+      setToast(error.response?.data?.message || 'Could not save user.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function editUser(user) {
+    setEditingUserId(user.id);
+    setUserForm({
+      name: user.name || '',
+      email: user.email || '',
+      password: '',
+      role: user.role || 'doctor',
+    });
+  }
+
+  async function removeUser(id) {
+    if (!window.confirm('Delete this user account?')) return;
+    try {
+      await deleteUser(id);
+      setUsers((current) => current.filter((user) => user.id !== id));
+      setToast('User deleted.');
+    } catch (error) {
+      setToast(error.response?.data?.message || 'Could not delete user.');
+    }
+  }
+
+  if (!authReady) {
+    return (
+      <main className="login-shell">
+        <div className="login-card">
+          <HeartPulse size={34} />
+          <h1>HealthCRM</h1>
+          <p>Connecting to the clinic workspace.</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <main className="login-shell">
+        <Toast message={toast} />
+        <form className="login-card" onSubmit={submitLogin}>
+          <span className="login-mark"><HeartPulse size={28} /></span>
+          <div>
+            <h1>HealthCRM</h1>
+            <p>Sign in to manage patients, appointments, records, and billing.</p>
+          </div>
+          <Field label="Email">
+            <input required type="email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
+          </Field>
+          <Field label="Password">
+            <input required type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
+          </Field>
+          {loginError && <p className="form-error">{loginError}</p>}
+          <button className="primary" disabled={saving} type="submit"><LockKeyhole size={17} /> Sign in</button>
+          <p className="login-hint">Seed login: admin@healthcrm.test / password123</p>
+        </form>
+      </main>
+    );
   }
 
   return (
@@ -336,7 +632,7 @@ function App() {
         </div>
 
         <nav>
-          {navItems.map(([id, label, Icon]) => (
+          {visibleNavItems.map(([id, label, Icon]) => (
             <button className={active === id ? 'active' : ''} key={id} type="button" onClick={() => setActive(id)}>
               <Icon size={18} />
               <span>{label}</span>
@@ -357,10 +653,20 @@ function App() {
             <h1>{navItems.find(([id]) => id === active)?.[1]}</h1>
             <span>Manage patients and appointments from one simple screen.</span>
           </div>
-          <label className="search">
-            <Search size={18} />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patients or appointments" />
-          </label>
+          <div className="top-actions">
+            <label className="search">
+              <Search size={18} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patients or appointments" />
+            </label>
+            <div className="user-chip">
+              <UserCircle size={20} />
+              <div>
+                <strong>{currentUser.name}</strong>
+                <small>{currentUser.role}</small>
+              </div>
+            </div>
+            <button className="icon-action" type="button" onClick={signOut}><LogOut size={17} /> Logout</button>
+          </div>
         </header>
 
         <section className="metrics">
@@ -476,6 +782,7 @@ function App() {
                     </div>
                     <span className={`status ${appointment.status}`}>{appointment.status}</span>
                     <div className="row-actions">
+                      <button type="button" onClick={() => editAppointment(appointment)}><Edit3 size={15} /> Edit</button>
                       <button type="button" onClick={() => changeAppointmentStatus(appointment, 'completed')}>Complete</button>
                       <button type="button" onClick={() => changeAppointmentStatus(appointment, 'cancelled')}>Cancel</button>
                       <button type="button" onClick={() => removeAppointment(appointment.id)}><Trash2 size={15} /> Delete</button>
@@ -511,9 +818,31 @@ function App() {
                     <option value="procedure">Procedure</option>
                   </select>
                 </Field>
+                {editingAppointmentId && (
+                  <Field label="Status">
+                    <select value={appointmentForm.status} onChange={(event) => setAppointmentForm({ ...appointmentForm, status: event.target.value })}>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="no_show">No show</option>
+                    </select>
+                  </Field>
+                )}
                 <Field label="Reason"><input value={appointmentForm.reason} onChange={(event) => setAppointmentForm({ ...appointmentForm, reason: event.target.value })} /></Field>
               </div>
-              <button className="primary" disabled={saving} type="submit"><Plus size={17} /> Book appointment</button>
+              <button className="primary" disabled={saving} type="submit"><Plus size={17} /> {editingAppointmentId ? 'Update appointment' : 'Book appointment'}</button>
+              {editingAppointmentId && (
+                <button className="secondary" type="button" onClick={() => {
+                  setEditingAppointmentId(null);
+                  setAppointmentForm({
+                    patient_id: patients[0]?.id || '',
+                    scheduled_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+                    type: 'consultation',
+                    reason: 'Routine care visit',
+                    status: 'scheduled',
+                  });
+                }}>Cancel edit</button>
+              )}
             </form>
           </section>
         )}
@@ -593,7 +922,17 @@ function App() {
                         <td>${Number(invoice.amount).toLocaleString()}</td>
                         <td><span className={`status ${invoice.status}`}>{invoice.status}</span></td>
                         <td>{invoice.due_date}</td>
-                        <td>{invoice.status !== 'paid' && <button className="inline-action" type="button" onClick={() => payInvoice(invoice)}>Pay</button>}</td>
+                        <td>
+                          <div className="row-actions">
+                          {invoice.status === 'paid' ? (
+                            <button className="inline-action" type="button" onClick={() => viewReceipt(invoice)}><ReceiptText size={14} /> Receipt</button>
+                          ) : (
+                            <button className="inline-action" type="button" onClick={() => payInvoice(invoice)}>Pay</button>
+                          )}
+                            <button type="button" onClick={() => editInvoice(invoice)}><Edit3 size={15} /> Edit</button>
+                            <button type="button" onClick={() => removeInvoice(invoice.id)}><Trash2 size={15} /> Delete</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -606,7 +945,7 @@ function App() {
             <form className="panel form-panel" onSubmit={submitInvoice}>
               <div className="panel-head">
                 <div>
-                  <h2>Create Invoice</h2>
+                  <h2>{editingInvoiceId ? 'Edit Invoice' : 'Create Invoice'}</h2>
                   <span>{selectedPatient ? `Bill ${selectedPatient.first_name} ${selectedPatient.last_name}` : 'Select a patient first.'}</span>
                 </div>
               </div>
@@ -622,17 +961,205 @@ function App() {
                   </select>
                 </Field>
               </div>
-              <button className="primary" disabled={saving || !selectedPatient} type="submit"><Plus size={17} /> Create invoice</button>
+              <button className="primary" disabled={saving || !selectedPatient} type="submit"><Plus size={17} /> {editingInvoiceId ? 'Update invoice' : 'Create invoice'}</button>
+              {editingInvoiceId && (
+                <button className="secondary" type="button" onClick={() => {
+                  setEditingInvoiceId(null);
+                  setInvoiceForm({
+                    amount: '',
+                    due_date: new Date(Date.now() + 1209600000).toISOString().slice(0, 10),
+                    description: 'Clinical services',
+                    status: 'sent',
+                  });
+                }}>Cancel edit</button>
+              )}
+              {selectedReceipt && (
+                <div className="receipt-card">
+                  <div>
+                    <span>Receipt</span>
+                    <strong>{selectedReceipt.receipt_number}</strong>
+                  </div>
+                  <p>{selectedReceipt.payment.patient.first_name} {selectedReceipt.payment.patient.last_name}</p>
+                  <dl>
+                    <div><dt>Amount</dt><dd>${Number(selectedReceipt.payment.amount).toLocaleString()}</dd></div>
+                    <div><dt>Status</dt><dd>{selectedReceipt.payment.status}</dd></div>
+                    <div><dt>Issued</dt><dd>{new Date(selectedReceipt.issued_at).toLocaleString()}</dd></div>
+                  </dl>
+                </div>
+              )}
             </form>
           </section>
         )}
 
+        {active === 'analytics' && (
+          <section className="analytics-layout">
+            <article className="panel analytics-hero">
+              <div className="panel-head">
+                <div>
+                  <h2>Analytics</h2>
+                  <span>Simple operational totals without noisy charts.</span>
+                </div>
+                <BarChart3 size={22} />
+              </div>
+              <div className="analytics-metrics">
+                <div>
+                  <span>Revenue collected</span>
+                  <strong>${totalRevenue.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <span>Patient groups</span>
+                  <strong>{patientStats.length}</strong>
+                </div>
+                <div>
+                  <span>Appointment states</span>
+                  <strong>{appointmentStats.length}</strong>
+                </div>
+              </div>
+            </article>
+
+            <section className="split">
+              <article className="panel">
+                <div className="panel-head">
+                  <div>
+                    <h2>Revenue By Month</h2>
+                    <span>Paid payment totals from the API.</span>
+                  </div>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th>Month</th><th>Total</th></tr>
+                  </thead>
+                  <tbody>
+                    {revenueRows.map((row) => (
+                      <tr key={row.month}>
+                        <td>{row.month}</td>
+                        <td>${Number(row.total).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </article>
+
+              <article className="panel">
+                <div className="panel-head">
+                  <div>
+                    <h2>Status Summary</h2>
+                    <span>Current patients and appointments.</span>
+                  </div>
+                </div>
+                <div className="status-lists">
+                  <div>
+                    <h3>Patients</h3>
+                    {patientStats.map((row) => (
+                      <p key={row.status}><span className={`status ${row.status}`}>{row.status}</span><strong>{row.total}</strong></p>
+                    ))}
+                  </div>
+                  <div>
+                    <h3>Appointments</h3>
+                    {appointmentStats.map((row) => (
+                      <p key={row.status}><span className={`status ${row.status}`}>{row.status}</span><strong>{row.total}</strong></p>
+                    ))}
+                  </div>
+                </div>
+              </article>
+            </section>
+          </section>
+        )}
+
         {active === 'access' && (
-          <section className="panel simple-panel">
-            <h2>{navItems.find(([id]) => id === active)?.[1]}</h2>
-            <p>
-              Admin, doctor, and patient roles are seeded in the database. The remaining work is enforcing permissions per screen and adding a user management page.
-            </p>
+          <section className="split">
+            <article className="panel">
+              <div className="panel-head">
+                <div>
+                  <h2>Signed In User</h2>
+                  <span>JWT authentication is active for every API request.</span>
+                </div>
+                <ShieldCheck size={21} />
+              </div>
+              <div className="profile-block">
+                <UserCircle size={42} />
+                <div>
+                  <strong>{currentUser.name}</strong>
+                  <span>{currentUser.email}</span>
+                  <small>{currentUser.role}</small>
+                </div>
+              </div>
+              <button className="secondary" type="button" onClick={signOut}><LogOut size={17} /> Sign out</button>
+              {currentUser.role === 'admin' && (
+                <div className="user-table">
+                  <h3>User Accounts</h3>
+                  <table>
+                    <thead>
+                      <tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
+                        <tr key={user.id}>
+                          <td>{user.name}</td>
+                          <td>{user.email}</td>
+                          <td><span className={`status ${user.role}`}>{user.role}</span></td>
+                          <td>
+                            <div className="row-actions">
+                              <button type="button" onClick={() => editUser(user)}><Edit3 size={15} /> Edit</button>
+                              <button type="button" disabled={user.id === currentUser.id} onClick={() => removeUser(user.id)}><Trash2 size={15} /> Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </article>
+
+            <form className="panel form-panel" onSubmit={submitUser}>
+              <div className="panel-head">
+                <div>
+                  <h2>{editingUserId ? 'Edit User' : 'Create User'}</h2>
+                  <span>Admin-only account management.</span>
+                </div>
+                <UserPlus size={20} />
+              </div>
+              {currentUser.role === 'admin' ? (
+                <>
+                  <div className="form-grid single">
+                    <Field label="Name"><input required value={userForm.name} onChange={(event) => setUserForm({ ...userForm, name: event.target.value })} /></Field>
+                    <Field label="Email"><input required type="email" value={userForm.email} onChange={(event) => setUserForm({ ...userForm, email: event.target.value })} /></Field>
+                    <Field label={editingUserId ? 'Password optional' : 'Password'}><input required={!editingUserId} minLength="8" type="password" value={userForm.password} onChange={(event) => setUserForm({ ...userForm, password: event.target.value })} /></Field>
+                    <Field label="Role">
+                      <select value={userForm.role} onChange={(event) => setUserForm({ ...userForm, role: event.target.value })}>
+                        <option value="admin">Admin</option>
+                        <option value="doctor">Doctor</option>
+                        <option value="patient">Patient</option>
+                      </select>
+                    </Field>
+                  </div>
+                  <button className="primary" disabled={saving} type="submit"><Plus size={17} /> {editingUserId ? 'Update user' : 'Create user'}</button>
+                  {editingUserId && (
+                    <button className="secondary" type="button" onClick={() => { setEditingUserId(null); setUserForm(emptyUser); }}>Cancel edit</button>
+                  )}
+                </>
+              ) : (
+                <p className="muted">Only admins can create or update users.</p>
+              )}
+            </form>
+
+            <article className="panel roles-panel">
+              <div className="panel-head">
+                <div>
+                  <h2>Roles</h2>
+                  <span>Seeded accounts and permission model.</span>
+                </div>
+              </div>
+              <div className="access-grid">
+                {roleCapabilities.map(([role, description]) => (
+                  <div className="detail-card" key={role}>
+                    <strong>{role}</strong>
+                    <p>{description}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
           </section>
         )}
       </section>

@@ -19,6 +19,38 @@ export async function login(email = 'admin@healthcrm.test', password = 'password
   return data.user;
 }
 
+export async function logout() {
+  try {
+    await api.post('/auth/logout');
+  } finally {
+    localStorage.removeItem('crm_token');
+  }
+}
+
+export async function getCurrentUser() {
+  const { data } = await api.get('/auth/me');
+  return data;
+}
+
+export async function getUsers() {
+  const { data } = await api.get('/users?per_page=20');
+  return data.data || data;
+}
+
+export async function createUser(payload) {
+  const { data } = await api.post('/users', payload);
+  return data;
+}
+
+export async function updateUser(id, payload) {
+  const { data } = await api.put(`/users/${id}`, payload);
+  return data;
+}
+
+export async function deleteUser(id) {
+  await api.delete(`/users/${id}`);
+}
+
 export async function getDashboard() {
   const { data } = await api.get('/analytics/dashboard');
   return data;
@@ -68,6 +100,15 @@ export async function createInvoice(patientId, payload) {
   return data;
 }
 
+export async function updateInvoice(id, payload) {
+  const { data } = await api.put(`/invoices/${id}`, payload);
+  return data;
+}
+
+export async function deleteInvoice(id) {
+  await api.delete(`/invoices/${id}`);
+}
+
 export async function createAppointment(payload) {
   const { data } = await api.post('/appointments', payload);
   return data;
@@ -84,6 +125,16 @@ export async function deleteAppointment(id) {
 
 export async function createPayment(payload) {
   const { data } = await api.post('/payments', payload);
+  return data;
+}
+
+export async function getPaymentReceipt(id) {
+  const { data } = await api.post(`/payments/${id}/receipt`);
+  return data;
+}
+
+export async function getPatientStats() {
+  const { data } = await api.get('/analytics/patients');
   return data;
 }
 
