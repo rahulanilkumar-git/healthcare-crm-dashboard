@@ -2,6 +2,15 @@
 
 A full-stack healthcare CRM for clinic operations. It includes JWT authentication, role-based API access, patient management, appointment scheduling, medical history notes, invoicing, demo payment recording, receipts, and analytics summaries.
 
+## Project Highlights
+
+- Built a full-stack healthcare CRM using Laravel 11, React 18, and MySQL
+- Implemented JWT authentication with admin, doctor, and patient role access
+- Developed patient, appointment, medical record, billing, invoice, and receipt workflows
+- Integrated Stripe test Checkout plus local demo payment recording
+- Added analytics summaries for patients, appointments, and revenue
+- Dockerized the application and included backend/frontend automated tests
+
 ## Preview
 
 ### Overview Dashboard
