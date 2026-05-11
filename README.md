@@ -4,9 +4,29 @@ A full-stack healthcare CRM for clinic operations. It includes JWT authenticatio
 
 ## Preview
 
+### Overview Dashboard
+
 ![Healthcare CRM overview dashboard](docs/screenshots/overview-dashboard.png)
 
 The overview screen shows the clinic workspace, patient metrics, revenue summary, searchable records, patient actions, and the patient creation form.
+
+## Screenshots
+
+### Patient Management
+
+![Patient management screen](docs/screenshots/patient-management.png)
+
+### Billing & Payments
+
+![Billing and payments screen](docs/screenshots/billing-payments.png)
+
+### Analytics
+
+![Analytics dashboard screen](docs/screenshots/analytics-dashboard.png)
+
+### Secure Login
+
+![Login screen](docs/screenshots/login-page.png)
 
 ## Features
 
