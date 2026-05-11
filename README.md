@@ -1,6 +1,16 @@
 # Healthcare CRM Dashboard
 
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat-square&logo=linkedin)](https://www.linkedin.com/in/anilkumar-rahul/)
+[![Laravel](https://img.shields.io/badge/Laravel-11-FF2D20?style=flat-square&logo=laravel)](https://laravel.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://reactjs.org)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Stripe](https://img.shields.io/badge/Stripe-Test%20Checkout-635BFF?style=flat-square&logo=stripe)](https://stripe.com)
+
 A full-stack healthcare CRM for clinic operations. It includes JWT authentication, role-based API access, patient management, appointment scheduling, medical history notes, invoicing, demo payment recording, receipts, and analytics summaries.
+
+## Business Value
+
+This CRM reduces administrative overhead by centralizing patient operations, appointment scheduling, billing, and payment tracking. It gives clinic staff real-time visibility into patient activity, revenue, and operational status.
 
 ## Project Highlights
 
