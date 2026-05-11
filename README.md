@@ -2,6 +2,12 @@
 
 A full-stack healthcare CRM for clinic operations. It includes JWT authentication, role-based API access, patient management, appointment scheduling, medical history notes, invoicing, demo payment recording, receipts, and analytics summaries.
 
+## Preview
+
+![Healthcare CRM overview dashboard](docs/screenshots/overview-dashboard.png)
+
+The overview screen shows the clinic workspace, patient metrics, revenue summary, searchable records, patient actions, and the patient creation form.
+
 ## Features
 
 ### Application

@@ -154,25 +154,34 @@ function App() {
 
   async function loadData() {
     try {
-      const [dashboardData, patientData, appointmentData, patientStatData, appointmentStatData, revenueData] = await Promise.all([
+      const [dashboardData, patientData, appointmentData] = await Promise.all([
         getDashboard(),
         getPatients(),
         getAppointments(),
-        getPatientStats(),
-        getAppointmentStats(),
-        getRevenue(),
       ]);
       setDashboard(dashboardData);
       setPatients(patientData);
       setAppointments(appointmentData);
-      setPatientStats(patientStatData);
-      setAppointmentStats(appointmentStatData);
-      setRevenueRows(revenueData);
       setAppointmentForm((current) => ({ ...current, patient_id: patientData[0]?.id || '' }));
       setApiState('Live API');
     } catch (error) {
       setApiState('Demo mode');
       setAppointmentForm((current) => ({ ...current, patient_id: patientsFallback[0]?.id || '' }));
+    }
+  }
+
+  async function loadAnalytics() {
+    try {
+      const [patientStatData, appointmentStatData, revenueData] = await Promise.all([
+        getPatientStats(),
+        getAppointmentStats(),
+        getRevenue(),
+      ]);
+      setPatientStats(patientStatData);
+      setAppointmentStats(appointmentStatData);
+      setRevenueRows(revenueData);
+    } catch (error) {
+      setToast('Could not load analytics.');
     }
   }
 
@@ -197,19 +206,25 @@ function App() {
         const user = await getCurrentUser();
         setCurrentUser(user);
         if (user.role === 'patient') setActive('access');
-        await loadData();
-        if (user.role === 'admin') await loadUsers();
-        await handleStripeReturn(user);
+        setAuthReady(true);
+        loadData();
+        if (user.role === 'admin') loadUsers();
+        handleStripeReturn(user);
       } catch (error) {
         localStorage.removeItem('crm_token');
         setApiState('Signed out');
-      } finally {
         setAuthReady(true);
       }
     }
 
     boot();
   }, []);
+
+  useEffect(() => {
+    if (currentUser && active === 'analytics' && !patientStats.length && !appointmentStats.length && !revenueRows.length) {
+      loadAnalytics();
+    }
+  }, [active, currentUser, patientStats.length, appointmentStats.length, revenueRows.length]);
 
   async function handleStripeReturn(user = currentUser) {
     const params = new URLSearchParams(window.location.search);
@@ -277,8 +292,8 @@ function App() {
       const user = await login(loginForm.email, loginForm.password);
       setCurrentUser(user);
       if (user.role === 'patient') setActive('access');
-      await loadData();
-      if (user.role === 'admin') await loadUsers();
+      loadData();
+      if (user.role === 'admin') loadUsers();
       setToast(`Welcome, ${user.name}.`);
     } catch (error) {
       setLoginError(error.response?.data?.message || 'Could not sign in. Check the API and credentials.');
