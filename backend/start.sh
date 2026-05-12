@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if [ ! -d vendor ]; then
+if [ ! -f vendor/autoload.php ]; then
   composer install
 fi
 
