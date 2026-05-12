@@ -153,21 +153,36 @@ function App() {
   const [saving, setSaving] = useState(false);
 
   async function loadData() {
+    let loadedAnyLiveData = false;
+    setApiState('Loading data');
+
     try {
-      const [dashboardData, patientData, appointmentData] = await Promise.all([
-        getDashboard(),
-        getPatients(),
-        getAppointments(),
-      ]);
+      const dashboardData = await getDashboard();
       setDashboard(dashboardData);
-      setPatients(patientData);
-      setAppointments(appointmentData);
-      setAppointmentForm((current) => ({ ...current, patient_id: patientData[0]?.id || '' }));
-      setApiState('Live API');
+      loadedAnyLiveData = true;
     } catch (error) {
-      setApiState('Demo mode');
+      setDashboard(dashboardFallback);
+    }
+
+    try {
+      const patientData = await getPatients();
+      setPatients(patientData);
+      setAppointmentForm((current) => ({ ...current, patient_id: patientData[0]?.id || '' }));
+      loadedAnyLiveData = true;
+    } catch (error) {
+      setPatients(patientsFallback);
       setAppointmentForm((current) => ({ ...current, patient_id: patientsFallback[0]?.id || '' }));
     }
+
+    try {
+      const appointmentData = await getAppointments();
+      setAppointments(appointmentData);
+      loadedAnyLiveData = true;
+    } catch (error) {
+      setAppointments(dashboardFallback.upcoming_appointments);
+    }
+
+    setApiState(loadedAnyLiveData ? 'Live API' : 'Demo mode');
   }
 
   async function loadAnalytics() {

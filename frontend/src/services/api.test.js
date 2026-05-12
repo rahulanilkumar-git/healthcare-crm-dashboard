@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import axios from 'axios';
 
 const apiMock = {
   interceptors: {
@@ -35,6 +36,14 @@ describe('API service', () => {
   beforeEach(() => {
     storage.clear();
     vi.clearAllMocks();
+  });
+
+  it('uses a patient timeout for Docker Laravel dev responses', async () => {
+    await import('./api');
+
+    expect(axios.create).toHaveBeenCalledWith(expect.objectContaining({
+      timeout: 30000,
+    }));
   });
 
   it('adds the JWT authorization header when a token exists', async () => {
