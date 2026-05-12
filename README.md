@@ -21,6 +21,10 @@ This CRM reduces administrative overhead by centralizing patient operations, app
 - Added analytics summaries for patients, appointments, and revenue
 - Dockerized the application and included backend/frontend automated tests
 
+## Demo Video
+
+[Watch the Healthcare CRM walkthrough](docs/demo/healthcare-crm-demo.mp4)
+
 ## Preview
 
 ### Overview Dashboard
