@@ -23,7 +23,9 @@ This CRM reduces administrative overhead by centralizing patient operations, app
 
 ## Demo Video
 
-[Watch the Healthcare CRM walkthrough](docs/demo/healthcare-crm-demo.mp4)
+[Watch or download the Healthcare CRM walkthrough](https://github.com/rahulanilkumar-git/healthcare-crm-dashboard/raw/main/docs/demo/healthcare-crm-demo.mp4)
+
+GitHub may download the MP4 instead of previewing it in the browser.
 
 ## Preview
 
