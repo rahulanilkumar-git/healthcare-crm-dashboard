@@ -665,13 +665,16 @@ function App() {
             <p>Sign in to manage patients, appointments, records, and billing.</p>
           </div>
           <Field label="Email">
-            <input required type="email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
+            <input disabled={saving} required type="email" value={loginForm.email} onChange={(event) => setLoginForm({ ...loginForm, email: event.target.value })} />
           </Field>
           <Field label="Password">
-            <input required type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
+            <input disabled={saving} required type="password" value={loginForm.password} onChange={(event) => setLoginForm({ ...loginForm, password: event.target.value })} />
           </Field>
           {loginError && <p className="form-error">{loginError}</p>}
-          <button className="primary" disabled={saving} type="submit"><LockKeyhole size={17} /> Sign in</button>
+          <button className="primary" disabled={saving} type="submit" aria-busy={saving}>
+            {saving ? <span className="button-spinner" aria-hidden="true" /> : <LockKeyhole size={17} />}
+            {saving ? 'Signing in...' : 'Sign in'}
+          </button>
           <p className="login-hint">Seed login: admin@healthcrm.test / password123</p>
         </form>
       </main>
